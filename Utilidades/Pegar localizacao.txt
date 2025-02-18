@@ -1,0 +1,175 @@
+{para usar esta Script crie o diretorio C:\\AdrenalineLogs\\ 
+ compre os itens no magic shop
+// Greater Antidote      
+// Bandage
+após comprar os itens coloque na barra de atalho
+quando quiser a localização use o Grater Antidote
+quando quiser pular uma linha no log use o Bandage
+}
+uses
+  SysUtils, Classes;
+
+var
+  LastCount1, LastCount2: Integer; // Armazena as quantidades anteriores dos itens
+  ItemID1, ItemID2: Integer;       // IDs dos itens a serem monitorados
+
+procedure DebugLog(const Message: string);
+var
+  DebugFileName: string;
+  DebugFile: TStringList;
+begin
+  { Define o nome do arquivo de log de depuração }
+  DebugFileName := 'C:\\AdrenalineLogs\\Debug_Log.txt'; // Altere este caminho conforme necessário
+
+  { Cria o diretório se ele não existir }
+  //if not DirectoryExists(ExtractFilePath(DebugFileName)) then
+    CreateDir(ExtractFilePath(DebugFileName));
+
+  { Salva a mensagem no arquivo de log de depuração }
+  DebugFile := TStringList.Create;
+  try
+    if FileExists(DebugFileName) then
+      DebugFile.LoadFromFile(DebugFileName);
+
+    { Adiciona a nova mensagem }
+    DebugFile.Add(DateTimeToStr(Now) + ': ' + Message); // Inclui data/hora na mensagem
+    DebugFile.SaveToFile(DebugFileName);
+  finally
+    DebugFile.Free;
+  end;
+end;
+
+procedure CreateDirectoryIfNotExists(const Path: string);
+begin
+  { Tenta criar o diretório. Se já existir, não faz nada }
+  if not CreateDir(Path) then
+  begin
+    DebugLog('Falha ao criar diretório: ' + Path);
+  end
+  else
+  begin
+    DebugLog('Diretório criado com sucesso: ' + Path);
+  end;
+end;
+
+procedure SaveLocationToFile;
+var
+  PosX, PosY, PosZ: Integer;
+  FileName, LogData: string;
+  LogFile: TStringList;
+begin
+  { Obtém a posição atual do personagem }
+  PosX := User.X;
+  PosY := User.Y;
+  PosZ := User.Z-16;
+
+  { Define o nome do arquivo de log com caminho absoluto }
+  FileName := 'C:\\AdrenalineLogs\\Character_Location_Log.txt'; // Altere este caminho conforme necessário
+
+  { Cria o diretório se ele não existir }
+  CreateDirectoryIfNotExists(ExtractFilePath(FileName));
+
+  { Formata os dados da localização }
+  LogData := IntToStr(PosX) + ', ' + IntToStr(PosY) + ', ' + IntToStr(PosZ);
+
+  { Cria ou carrega o arquivo de log }
+  LogFile := TStringList.Create;
+  try
+    if FileExists(FileName) then
+      LogFile.LoadFromFile(FileName);
+
+    { Adiciona a nova localização }
+    LogFile.Add(LogData);
+    LogFile.SaveToFile(FileName);
+    DebugLog('Localização salva: ' + LogData);
+  finally
+    LogFile.Free;
+  end;
+end;
+
+procedure AddBlankLineToFile;
+var
+  FileName: string;
+  LogFile: TStringList;
+begin
+  { Define o nome do arquivo de log com caminho absoluto }
+  FileName := 'C:\\AdrenalineLogs\\Character_Location_Log.txt'; // Altere este caminho conforme necessário
+
+  { Cria o diretório se ele não existir }
+  CreateDirectoryIfNotExists(ExtractFilePath(FileName));
+
+  { Cria ou carrega o arquivo de log }
+  LogFile := TStringList.Create;
+  try
+    if FileExists(FileName) then
+      LogFile.LoadFromFile(FileName);
+
+    { Adiciona uma linha em branco }
+    LogFile.Add('');
+    LogFile.SaveToFile(FileName);
+    DebugLog('Linha em branco adicionada ao arquivo de log.');
+  finally
+    LogFile.Free;
+  end;
+end;
+
+procedure CheckItems;
+var
+  CurrentCount1, CurrentCount2: Integer;
+begin
+  { Obtém as quantidades atuais dos itens }
+  CurrentCount1 := verificarItem(ItemID1);
+  CurrentCount2 := verificarItem(ItemID2);
+
+  { Verifica se o ItemID1 diminuiu }
+  if CurrentCount1 < LastCount1 then
+  begin
+    DebugLog('ItemID1 diminuiu. Salvando localização...');
+    SaveLocationToFile;
+    LastCount1 := CurrentCount1; // Atualiza a quantidade anterior
+  end;
+
+  { Verifica se o ItemID2 diminuiu }
+  if CurrentCount2 < LastCount2 then
+  begin
+    DebugLog('ItemID2 diminuiu. Adicionando linha em branco...');
+    AddBlankLineToFile;
+    LastCount2 := CurrentCount2; // Atualiza a quantidade anterior
+  end;
+end;
+//-----------------> separação <-------------------------------//
+
+function verificarItem(iditem: integer): int64;  overload; 
+//verificar um item especifico para comprar os pedir a outro char (ex: ss de pet, SoulOre e etc)
+var
+ i: integer;
+begin
+  result:= 0;                                          
+  for i:= 0 to Inventory.User.Count-1 do 
+  begin         // running over the user's inventory
+    if (Inventory.User.Items(i).ID = iditem) then          // if id matched, then
+    Inc(result, Inventory.User.Items(i).Count);      // increase the result by the number of items in the stack
+  end; 
+ end;
+
+//-----------------> separação <-------------------------------//
+begin
+  { Define os IDs dos itens a serem monitorados }
+  ItemID1 := 1832; // Greater Antidote
+  ItemID2 := 1833; // Bandage
+
+  { Inicializa as quantidades anteriores dos itens }
+  LastCount1 := verificarItem(ItemID1);
+  LastCount2 := verificarItem(ItemID2);
+  print (lastCount1);
+  print (lastCount2);
+  { Registra início do script no log de depuração }
+  DebugLog('Script iniciado. Monitorando itens...');
+
+  { Loop principal para monitorar os itens }
+  while True do
+  begin
+    CheckItems;       // Verifica os itens
+    delay(1000);      // Aguarda 1 segundo antes da próxima verificação
+  end;
+end.
