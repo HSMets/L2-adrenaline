@@ -1,0 +1,97 @@
+unit ModuleFunctions;
+
+interface
+
+uses 
+	SysUtils, Classes, SettingsModule;//, TNpcListModule;
+	// Importa as unidades necessárias para manipulação de strings, listas e configurações
+	
+var
+	Settings: TSettings; // Declara uma variável global para manipular as configurações
+	
+	// Declaração de procedimentos e funções para gerenciar estados e armazenar valores
+	procedure updateState(stateType: string; stateValue: string; value: string); overload;
+	procedure updateState(stateType: string; stateValue: string; value: integer); overload;
+	function getState(stateType: string; stateValue: string; value: string): string; overload;
+	function getState(stateType: string; stateValue: string; value: integer): integer; overload;
+	function getState(stateType: string; stateValue: string; value: boolean): boolean; overload;
+	function getArray(stateType: string; stateValue: string; value: string): array of integer;
+	// As funções getState e updateState possuem overload, permitindo diferentes tipos de entrada e saída
+	
+implementation
+
+// Procedimento para atualizar um estado armazenando um valor string
+procedure updateState;
+begin
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Salva o valor string na configuração correspondente
+	Settings.Save(stateType, stateValue, value);
+end;
+
+// Procedimento para atualizar um estado armazenando um valor inteiro
+procedure updateState;
+begin
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Salva o valor inteiro na configuração correspondente
+	Settings.Save(stateType, stateValue, value);
+end;
+
+// Função para recuperar um valor string armazenado nas configurações
+function getState;
+begin
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Retorna o valor string armazenado na configuração
+	Result := Settings.Load(stateType, stateValue, value);
+end;
+
+// Função para recuperar um valor inteiro armazenado nas configurações
+function getState;
+begin
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Retorna o valor inteiro armazenado na configuração
+	Result := Settings.Load(stateType, stateValue, value);
+end;
+
+// Função para recuperar um valor booleano armazenado nas configurações
+function getState;
+begin
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Retorna o valor booleano armazenado na configuração, convertendo de string para booleano
+	Result := Settings.LoadBool(stateType, stateValue, BoolToStr(value));
+end;
+
+// Função para recuperar uma lista de valores inteiros armazenados em formato de string
+function getArray;
+var
+	sl:TStringList; // Declara uma lista de strings para armazenar os valores
+	i: integer; // Variável auxiliar para iteração
+	resStr: string; // Variável para armazenar o valor recuperado
+begin
+	// Cria uma nova lista de strings
+	sl := TStringList.Create;
+	// Define o arquivo de configurações com base no nome do usuário
+	Settings.SetFile(Script.Path + User.Name + '_Settings.ini');
+	// Carrega o valor armazenado como string
+	resStr := Settings.Load(stateType, stateValue, value);
+  try
+    // Define o delimitador para separar os valores armazenados
+    sl.Delimiter     := ';';
+    sl.DelimitedText := resStr;
+	// Ajusta o tamanho do array de retorno com base na quantidade de elementos na lista
+	SetLength(Result, sl.Count);
+	// Converte cada elemento da lista para inteiro e armazena no array de retorno
+	for i:=0 to sl.count-1 do
+		Result[i] := StrToInt(sl[i]);
+  finally
+    // Libera a memória da lista após o uso
+    sl.Free;
+  end;
+end;
+
+begin
+end.

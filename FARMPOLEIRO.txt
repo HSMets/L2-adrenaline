@@ -1,0 +1,611 @@
+uses  SettingsModule, Classes, TeleportModule, Locations, UserFunctions,SysUtils;
+
+const
+  buffCheck = 1519;
+  SCROLL_OF_SCAPE = 1829; //736;
+  Reciver = 'tosemnome';
+  
+  darkStone = 9550;
+  windStone = 9549;
+  waterStone = 9547;
+  fireStone = 9546;
+  holyStone = 9551;
+  earthStone = 9548;
+  
+
+type
+  TCity = (DWARVEN = 0, ORC = 1, DARK_ELVEN = 2, ELVEN = 3, KAMAEL = 4,
+	TALKING_ISLAND = 5, HEINE = 6, DION = 7, GIRAN = 8, ADEN = 9, GODDARD = 10,
+	GLUDIO = 11, GLUDIN = 12, SHTUTTGART = 13, RUNE = 14, OREN = 15, HUNTER = 16, NON_CITY = 17);  
+
+var
+  PedirBuff: boolean =false;
+
+  Buffando: boolean = false;
+  Buff: boolean = false;
+
+  BuffOK1: boolean = true;
+  BuffOK2: boolean = true;
+  FarmOK: boolean = false;
+
+
+function  isDead: boolean;
+begin
+  isDead := false;
+  if  User.Dead  then
+  begin
+    Delay (10000); // In case of resurrection
+  end;
+  if  User.Dead  then
+  begin
+    isDead := true;
+	PedirBuff:=false;
+    Engine.FaceControl (0,false);
+    Print ('Dead. Pressing to village.');
+    Engine.GoHome;
+    Delay (5000);
+    InFight := false;
+    //BuffOK1:=false;
+//    BuffOK2:=false;	
+	
+  end;
+end;
+
+
+function needsBuffs: boolean;
+var
+  buff: TL2Buff;
+begin
+  needsBuffs := false;
+  // check for any buff that you use
+  if  not User.Buffs.ByID(buffCheck, Buff)  or
+    User.Buffs.ById(buffCheck, buff)  and  (buff.EndTime < 10 * 1000)  then
+  begin
+    needsBuffs := true;
+    BuffOK1:=false;
+    BuffOK2:=false;
+       Engine.Facecontrol (0, false); // turn on bot interface
+  end;
+end;
+
+procedure  Chat;
+
+begin
+  while true do
+  begin
+//    delay(500);
+//  if ChatMessage.Unread and ChatMessage.text, 'buffok'  then
+//               BuffOK:=true;
+           
+    if ChatMessage.Unread  and AnsiSameText(ChatMessage.text,'ok') then  ///and (integer(ChatMessage.ChatType) = 2)
+    begin
+	    if BuffOK1 then
+   	  begin
+     	  BuffOK2:=true;
+		  Engine.LeaveParty;
+   	  end
+   	  else 
+   	  begin
+		    BuffOK1:=true;
+		    end;
+		
+        Print ('move to gk');
+        //BuffOK1:=true;
+        
+      end;
+  
+    end;
+
+end;
+
+
+
+procedure killAggroMobs(mobsArray : Array of TL2Live);
+var
+  i: Integer;
+begin
+  for  i := 0  to  Length(mobsArray)-1  do
+  begin
+    if  mobsArray[i].Dead  and  not User.Dead  then continue;
+
+    while  not mobsArray[i].Dead  and  not User.Dead  do
+    begin
+      Engine.SetTarget(mobsArray[i]);
+      Engine.Attack;
+      {
+        if  isMage1  then
+        begin
+          Engine.UseSkill(1177); // TODO: Change for skill name
+        end;
+        if  not isMage1  then
+        begin
+          Engine.Attack;
+        end;
+      }
+    end;
+  end;
+end;
+{
+--------------------------------------------------------------------------------
+  Checks the number of mobs that are attacking you and kills them if the number
+  is greater than zero
+--------------------------------------------------------------------------------
+}
+
+
+function countAggroMobsOnUser: Array of TL2Live;
+var
+  i: Integer;
+begin
+  SetLength (Result, 0);
+  for  i := 0  to  NpcList.Count-1  do
+  begin
+    {
+      If the mob is targeting the character and the mob isn't dead and the mob
+      exists, then add the mob to the array of mobs.
+    }
+    if (NpcList.Items(i).Target = User)  and  not NpcList.Items(i).Dead  and
+       (NpcList.Items(i) <> nil)  then
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[Length(Result)-1] := NpcList.Items(i);
+    end;
+  end;
+end;
+procedure killAgroMobsThread;
+var
+  mobsArray: Array of TL2Live;
+begin
+  while Engine.Status = lsOnline do
+  begin
+    mobsArray := countAggroMobsOnUser;
+    if Length(mobsArray) > 0 then
+    begin
+      killAggroMobs(mobsArray);
+    end;
+  Delay(500);
+  end;
+end;
+
+   
+
+procedure  MoveToBuff;
+begin
+  while true do
+  begin
+
+	isDead();
+    if User.InRange(148952,26152,-2184,250,150) then
+    begin
+
+      if (needsBuffs) then
+      begin
+      
+		if not PedirBuff then
+		begin
+         PedirBuff := true;
+         Print ('Pedir Buff');
+         Engine.Say('PVE', 2, 'Hiero');
+         Delay(500);
+         Engine.Say('PVE', 2, 'Maestro');
+         BuffOK1:=false;
+         BuffOK2:=false;
+		 enviaStone();
+         Delay (10*1000); //espera 10 segundos
+		end;
+      end
+      else
+      begin
+	  
+	  if (BuffOK1 and BuffOK2) then
+	  begin
+	  
+      //move para GK
+
+           Print ('move to gk');
+
+           Engine.LeaveParty;
+           Engine.MoveTo(148360,26440,-2184);
+           Engine.MoveTo(148120,26664,-2208);
+           Engine.MoveTo(147480,26536,-2200);
+           Engine.MoveTo(147208,25832,-2016);
+           Engine.MoveTo(146760,25800,-2016);
+
+           Engine.SetTarget ('Elisa');
+
+           Engine.DlgOpen;
+           Delay (500);
+           Engine.DlgSel ('Teleport');
+           Delay (500);
+           Engine.DlgSel ('Entrance to The Giant''s Cave');
+           Delay (500);
+           Engine.DlgSel ('The Giant Cave');
+           Print ('Teleported.');
+           Delay (5 * 1000);
+
+           Engine.MoveTo(174472,52792,-4360);
+
+           Engine.SetTarget ('Sobling');
+           Engine.DlgOpen;
+           Engine.DlgSel ('Move to the upper level');
+           Delay (5 * 1000);      
+
+           Engine.MoveTo(183064,62632,-3992);
+           Engine.MoveTo(182280,62328,-3992);
+
+           Engine.MoveTo(182376,59944,-3992);
+           Engine.MoveTo(180728,59496,-3992); //final
+		   
+		   
+		   
+           Engine.Facecontrol (0, true); // turn on bot interface
+
+		end;
+      end;
+
+    end
+    else
+    begin
+
+                 
+ 	if User.inrange(148296,28408,-2272,500)  then
+		begin
+		
+		  Print ('0');
+		  Engine.MoveTo(148296,28408,-2272);
+		 
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+	 
+		if User.inrange(146811,27109,-2231,500)  then
+		begin
+		  Print ('1');
+		  Engine.MoveTo(146811,27109,-2231);
+		  Engine.MoveTo(147289,26926,-2229);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(146810,28059,-2294,500)  then
+		begin
+		Print ('2');
+		  Engine.MoveTo(146810,28059,-2294);
+		  Engine.MoveTo(146847,27874,-2294);
+		  Engine.MoveTo(147004,27611,-2294);
+		  Engine.MoveTo(147004,27611,-2294);
+		  Engine.MoveTo(147004,27611,-2232);
+		  Engine.MoveTo(147244,26822,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(145686,21112,-2167,500)  then
+		begin
+		  Print ('3');
+		  Engine.MoveTo(145686,21112,-2167);
+		  Engine.MoveTo(145697,21616,-2167);
+		  Engine.MoveTo(145050,22609,-2167);
+		  Engine.MoveTo(145218,23947,-2167);
+		  Engine.MoveTo(146377,24455,-2039);
+		  Engine.MoveTo(146484,25685,-2039);
+		  Engine.MoveTo(147130,25700,-2039);
+		  Engine.MoveTo(147112,25921,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(148076,27069,-2231,500)  then
+		begin
+		  Print ('4');
+		  Engine.MoveTo(148076,27069,-2231);
+		  Engine.MoveTo(147666,27110,-2230);
+		  Engine.MoveTo(147308,26954,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(148949,21125,-2167,500)  then
+		begin
+		  Print ('5');
+		  Engine.MoveTo(148949,21125,-2167);
+		  Engine.MoveTo(146122,21227,-2167);
+		  Engine.MoveTo(145697,21616,-2167);
+		  Engine.MoveTo(145050,22609,-2167);
+		  Engine.MoveTo(145218,23947,-2167);
+		  Engine.MoveTo(146377,24455,-2039);
+		  Engine.MoveTo(146484,25685,-2039);
+		  Engine.MoveTo(147130,25700,-2039);
+		  Engine.MoveTo(147112,25921,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(144549,22828,-2167,500)  then
+		begin
+		Print ('6');
+		  Engine.MoveTo(144549,22828,-2167);
+		  Engine.MoveTo(145697,21616,-2167);
+		  Engine.MoveTo(145050,22609,-2167);
+		  Engine.MoveTo(145218,23947,-2167);
+		  Engine.MoveTo(146377,24455,-2039);
+		  Engine.MoveTo(146484,25685,-2039);
+		  Engine.MoveTo(147130,25700,-2039);
+		  Engine.MoveTo(147112,25921,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(144543,24666,-2167,500)  then
+		begin
+		  Print ('7');
+		  Engine.MoveTo(144543,24666,-2167);
+		  Engine.MoveTo(145279,24307,-2167);
+		  Engine.MoveTo(146377,24455,-2039);
+		  Engine.MoveTo(146484,25685,-2039);
+		  Engine.MoveTo(147130,25700,-2039);
+		  Engine.MoveTo(147112,25921,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(146497,30582,-2487,500)  then
+		begin
+		  Print ('8');
+		  Engine.MoveTo(146497,30582,-2487);
+		  Engine.MoveTo(147058,30323,-2487);
+		  Engine.MoveTo(147427,29959,-2487);
+		  Engine.MoveTo(147427,29339,-2295);
+		  Engine.MoveTo(147373,28351,-2294);
+		  Engine.MoveTo(147100,27643,-2294);
+		  Engine.MoveTo(147246,26930,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(144648,29158,-2487,500)  then
+		begin
+		  Print ('9');
+		  Engine.MoveTo(144648,29158,-2487);
+		  Engine.MoveTo(144966,28868,-2487);
+		  Engine.MoveTo(145110,27659,-2295);
+		  Engine.MoveTo(146220,27622,-2231);
+		  Engine.MoveTo(147108,27272,-2231);
+		  Engine.MoveTo(147224,26929,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(150247,29109,-2487,500)  then
+		begin
+		  Print ('10');
+		  Engine.MoveTo(150247,29109,-2487);
+		  Engine.MoveTo(149921,28836,-2487);
+		  Engine.MoveTo(149859,28063,-2339);
+		  Engine.MoveTo(149776,27675,-2295);
+		  Engine.MoveTo(148731,27683,-2231);
+		  Engine.MoveTo(148224,27383,-2231);
+		  Engine.MoveTo(147306,26932,-2230);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(147848,30309,-2487,500)  then
+		begin
+		  Print ('11');
+		  Engine.MoveTo(147848,30309,-2487);
+		  Engine.MoveTo(147677,30089,-2487);
+		  Engine.MoveTo(147462,29870,-2447);
+		  Engine.MoveTo(147462,29413,-2295);
+		  Engine.MoveTo(147335,28272,-2294);
+		  Engine.MoveTo(147108,27664,-2294);
+		  Engine.MoveTo(147194,26961,-2229);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(144651,26680,-2295,500)  then
+		begin
+		  Print ('12');
+		  Engine.MoveTo(144651,26680,-2295);
+		  Engine.MoveTo(144681,27050,-2294);
+		  Engine.MoveTo(144936,27135,-2295);
+		  Engine.MoveTo(145145,27605,-2295);
+		  Engine.MoveTo(146182,27682,-2231);
+		  Engine.MoveTo(146921,27360,-2231);
+		  Engine.MoveTo(147218,26948,-2229);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(148557,30461,-2487,500)  then
+		begin
+		  Print ('13');
+		  Engine.MoveTo(148557,30461,-2487);
+		  Engine.MoveTo(148114,30076,-2487);
+		  Engine.MoveTo(147453,30049,-2487);
+		  Engine.MoveTo(147474,29710,-2368);
+		  Engine.MoveTo(147397,28461,-2294);
+		  Engine.MoveTo(147044,27389,-2231);
+		  Engine.MoveTo(147242,26823,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+ 	 		Engine.MoveTo(147704,26680,-2208);
+ 	 		Engine.MoveTo(148264,26616,-2200);
+ 	 		Engine.MoveTo(148440,26264,-2184);
+ 	 		Engine.MoveTo(148952,26152,-2184);
+
+		end;
+		if User.inrange(147971,27982,-2294,500)  then
+		begin
+		  Print ('14');
+		  Engine.MoveTo(147971,27982,-2294);
+		  Engine.MoveTo(147846,27354,-2231);
+		  Engine.MoveTo(147265,26878,-2230);
+		  Engine.MoveTo(147267,26400,-2185);
+		  //Engine.MoveTo(147266,26195,-2103);
+		  //Engine.MoveTo(147250,25969,-2039);
+		  //Engine.MoveTo(147206,25899,-2039);
+		  //Engine.MoveTo(147138,25906,-2039);
+			 		Engine.MoveTo(147704,26680,-2208);
+		 		Engine.MoveTo(148264,26616,-2200);
+		 		Engine.MoveTo(148440,26264,-2184);
+		 		Engine.MoveTo(148952,26152,-2184);
+	
+		end;
+
+//		Print ('15');
+
+
+		 //Engine.MoveTo(147416,25912,-2016);
+
+		end;    
+
+     
+   end;   
+end;	
+	
+
+
+procedure unlockServer;
+var
+  pin: Integer;
+  Moved: Boolean;
+  lastX: Integer;
+  newX: Integer;
+begin
+  Delay (3000); // Wait 3s for the server to load
+  lastX := User.X;
+  newX  := User.X + 5;
+  Engine.MoveTo(newX, User.Y, User.Z);
+  if User.InRange(newX, User.Y, User.z, 3, 10) then Moved := true;
+
+  // If it didn't moved it is locked
+  if not Moved then
+  begin
+    //pin := xxxxxx; // TODO: add configuration for pin
+    //Engine.BypassToServer('custom_pin_unlock ' + IntToStr(pin));
+  end;
+end;
+
+procedure enviaStone();
+var
+  itemTemp: tl2item;
+begin
+ 
+ if Inventory.user.ByID(darkStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [darkStone, itemTemp.count], 0);
+ end;
+
+Delay (10*1000); 
+ if Inventory.user.ByID(windStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [windStone, itemTemp.count], 0);
+ end;
+
+Delay (10*1000); 
+
+ if Inventory.user.ByID(waterStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [waterStone, itemTemp.count], 0);
+ end;
+
+Delay (10*1000); 
+
+ if Inventory.user.ByID(fireStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [fireStone, itemTemp.count], 0);
+ end;
+
+Delay (10*1000); 
+
+ if Inventory.user.ByID(holyStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [holyStone, itemTemp.count], 0);
+ end;
+
+Delay (10*1000); 
+
+ if Inventory.user.ByID(earthStone, itemTemp) and (itemTemp.count >= 1) then
+ begin 
+	Engine.SendMail(Reciver, 'stones', 'segue stones', [earthStone, itemTemp.count], 0);
+ end;
+
+
+end;
+
+
+BEGIN
+  Print ('iniciando');
+  Script.NewThread (@MoveToBuff);  
+  Script.NewThread (@Chat);
+//  Script.NewThread (@enviaStone);  
+//  Script.NewThread (@LocalAtual);
+//  Script.NewThread (@MoveToGK);
+//  Script.NewThread (@continueFarming);   
+//	Script.NewThread (@continueFarming); 
+	
+END.

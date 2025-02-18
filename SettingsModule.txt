@@ -1,0 +1,115 @@
+unit SettingsModule;
+
+interface
+
+uses SysUtils;
+
+// Definição de um tipo enumerado para representar diferentes cidades no jogo
+// Cada cidade recebe um índice numérico
+// NON_CITY representa um local indefinido
+// PRIMEVAL_ISLE representa uma ilha primitiva
+
+type
+    TCity = (DWARVEN = 0, ORC = 1, DARK_ELVEN = 2, ELVEN = 3, KAMAEL = 4,
+        TALKING_ISLAND = 5, HEINE = 6, DION = 7, GIRAN = 8, ADEN = 9, GODDARD = 10,
+        GLUDIO = 11, GLUDIN = 12, SHTUTTGART = 13, RUNE = 14, OREN = 15, HUNTER = 16,
+        NON_CITY = 17, PRIMEVAL_ISLE = 18);
+
+// Declaração de um registro para armazenar configurações
+  TSettings = packed record
+  private
+    fFile: string; // Nome do arquivo de configuração
+  public
+    // Define o nome do arquivo de configuração
+    procedure SetFile(const Name: string);
+    // Salva um valor string no arquivo de configuração
+    procedure Save(const Section, Key, Data: string); overload;
+    // Salva um valor inteiro no arquivo de configuração
+    procedure Save(const Section, Key: string; Data: Integer); overload;
+    // Carrega um valor string do arquivo de configuração
+    function  Load(const Section, Key: string; DefData: string  = ''): string; overload;
+    // Carrega um valor inteiro do arquivo de configuração
+    function  Load(const Section, Key: string; DefData: integer = 0) : integer; overload;
+    // Carrega um valor booleano do arquivo de configuração
+    function  LoadBool(const Section, Key: string; DefData: string = ''): boolean;
+  end;
+
+// Converte um valor booleano para string
+function BoolToStr(const value : boolean): string;
+
+var
+    item: TL2Item; // Variável global representando um item
+    inFight: boolean; // Variável global indicando se o jogador está em combate
+
+implementation
+
+// Importação de funções da API do Windows para manipulação de arquivos de configuração
+function GetPrivateProfileIntW(lpAppName, lpKeyName: PChar; nDefault: Integer; lpFileName: PChar): Integer; stdcall; external 'Kernel32.dll';
+function GetPrivateProfileStringW(lpAppName, lpKeyName, lpDefault: PWideChar; lpReturnedString: Pointer; nSize: DWORD; lpFileName: PWideChar): DWORD; stdcall; external 'Kernel32.dll';
+function WritePrivateProfileStringW(lpAppName, lpKeyName, lpString, lpFileName: PChar): Boolean; stdcall; external 'Kernel32.dll';
+
+// Buffer usado para armazenar temporariamente valores lidos do arquivo de configuração
+var
+  buf: array [0..2048] of Byte;
+
+// Função que converte um valor booleano para string ('True' ou 'False')
+function BoolToStr;
+begin
+   if value then
+    Result := 'True'
+   else
+    Result := 'False';
+end;
+ 
+// Define o nome do arquivo de configuração
+procedure TSettings.SetFile(const Name: string);
+begin
+  fFile := Name;
+end;
+
+// Salva um valor string no arquivo de configuração
+procedure TSettings.Save(const Section, Key, Data: string);
+begin
+  WritePrivateProfileStringW(PChar(Section), PChar(Key), PChar(Data), PChar(fFile));
+end;
+
+// Salva um valor inteiro no arquivo de configuração
+procedure TSettings.Save(const Section, Key: string; Data: Integer);
+begin
+  Save(Section, Key, IntToStr(Data)); // Converte o inteiro para string antes de salvar
+end;
+
+// Salva um valor booleano no arquivo de configuração
+procedure TSettings.Save(const Section, Key: string; Data: boolean);
+begin
+  Save(Section, Key, BoolToStr(Data)); // Converte o booleano para string antes de salvar
+end;
+
+// Carrega um valor string do arquivo de configuração
+function TSettings.Load(const Section, Key: string; DefData: string = ''): string;
+begin
+  GetPrivateProfileStringW(PChar(Section), PChar(Key), PChar(DefData), @buf, 2048, PChar(fFile));
+  Result := PChar(@buf); // Retorna o valor lido convertido para string
+end;
+
+// Carrega um valor inteiro do arquivo de configuração
+function TSettings.Load(const Section, Key: string; DefData: integer = 0): Integer;
+begin
+  Result := GetPrivateProfileIntW(PChar(Section), PChar(Key), DefData, PChar(fFile));
+end;
+
+// Carrega um valor booleano do arquivo de configuração
+function TSettings.LoadBool(const Section, Key: string; DefData: string = ''): boolean;
+var
+  compString: string;
+begin
+  GetPrivateProfileStringW(PChar(Section), PChar(Key), PChar(DefData), @buf, 2048, PChar(fFile));
+  compString := PChar(@buf);
+  if (AnsiCompareText(compString, 'true') = 0) then
+    Result := true
+  else
+    Result := false;
+end;
+
+BEGIN
+END.
